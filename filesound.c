@@ -24,11 +24,11 @@ int main(int argc, char *argv[]) {
 		stretch_factor = 1;
 	
 	// Open source file
-	FILE *src = fopen(argv[1], "r");
+	FILE *src = fopen(argv[1], "rb");
 
 	// Open target file
 	strcat(argv[2], ".wav");
-	FILE *tgt = fopen(argv[2], "w");
+	FILE *tgt = fopen(argv[2], "wb");
 
 	// Seek to data chunk location (44 bytes in)
 	fseek(tgt, 44, SEEK_SET);
@@ -48,6 +48,9 @@ int main(int argc, char *argv[]) {
 	// Write data subchunk header
 	write_data_header(tgt, n * stretch_factor);
 
+	int secs = (n * stretch_factor) / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
+	printf("Wrote %lu bytes (about %d seconds of audio).\n", n * stretch_factor, secs);
+
 	return 0;
 }
 
@@ -57,10 +60,13 @@ unsigned long copy_bytes(FILE *fi, FILE *fo, int sf) {
 	unsigned long i;
 	int j;
 	// Write bytes from source to target
-	for (i = 0; (c = fgetc(fi)) != EOF; i++) {
+	for (i = 0; !feof(fi); i++) {
+		c = fgetc(fi);
 		for (j = 0; j < sf; j++)
 			fputc(c, fo);
 	}
+
+	//printf("Last byte was %02x.\n", c);
 	// return number of bytes copied across (ignoring sf)
 	return i;
 }

@@ -1,2 +1,4 @@
+*.wav
 */*.wav
+a.out
 */a.out
