@@ -26,6 +26,10 @@ int main(int argc, char *argv[]) {
 	
 	// Open source file
 	FILE *src = fopen(argv[1], "rb");
+	if (src == NULL) {
+		fprintf(stderr, "I can't find the file '%s'. :(\n", argv[1]);
+		return 1;
+	}
 
 	// Open target file
 	strcat(argv[2], ".wav");
@@ -48,6 +52,10 @@ int main(int argc, char *argv[]) {
 
 	// Write data subchunk header
 	write_data_header(tgt, n * stretch_factor);
+
+	// Close files
+	fclose(src);
+	fclose(tgt);
 
 	int secs = (n * stretch_factor) / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
 	printf("Wrote %lu bytes (about %d seconds of audio).\n", n * stretch_factor, secs);
