@@ -7,3 +7,4 @@ Writes the bytes in **source file** to the data section of a WAVE file with the 
 ### PROTIP:
 - try listening to bitmapped images &mdash; they sound much cooler than more sophisticated formats.
 - try running filesound on /bin/bash or some other binary. maybe even run it on itself!
+- sounds cool on stuff from /var/log/
