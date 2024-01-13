@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define SAMPLE_RATE 44000
 #define NUM_CHANNELS 2
@@ -17,24 +18,68 @@ void write_fmt_subchunk(FILE*);
 void write_data_header(FILE*, unsigned long);
 
 int main(int argc, char *argv[]) {
-	// Get stretch factor as (optional) argument
-	int stretch_factor;
-	char *s;
-	if ((s = argv[3]) != NULL)
-		stretch_factor = atoi(s);
-	else
-		stretch_factor = 1;
+
+	// Parse arguments
+	int stretch_factor = 1;
+	char *srcfn, *tgtfn;
+	srcfn = tgtfn = NULL;
+	if (argc == 4) {
+		srcfn = argv[1];
+		tgtfn = argv[2];
+		stretch_factor = atoi(argv[3]);
+
+	} else if (argc == 3) {
+		srcfn = argv[1];
+		if (isdigit((int) *argv[2]))
+			stretch_factor = atoi(argv[2]);
+		else
+			tgtfn = argv[2];
+
+	} else if (argc == 2) {
+		if (isdigit((int) *argv[1]))
+			stretch_factor = atoi(argv[1]);
+		else
+			srcfn = argv[1];
+
+		tgtfn = srcfn;
+
+	} else if (argc == 1) {
+		// We'll go stdin --> stdout, with stretch factor 1.
+		
+	} else if (argc > 4) {
+		fprintf(stderr, "Too many arguments.\n");
+
+	} else {
+		// Should never happen
+		fprintf(stderr, "Something really weird happened.\n");
+	}
 	
 	// Open source file
-	FILE *src = fopen(argv[1], "rb");
+	FILE *src;
+	if (srcfn != NULL)
+		src = fopen(srcfn, "rb");
+	else
+		// We'll read from stdin
+		src = stdin;
+
 	if (src == NULL) {
 		fprintf(stderr, "I can't find the file '%s'. :(\n", argv[1]);
 		return 1;
 	}
 
 	// Open target file
-	strcat(argv[2], ".wav");
-	FILE *tgt = fopen(argv[2], "wb");
+	FILE *tgt;
+	if (tgtfn != NULL) {
+		strcat(tgtfn, ".wav");
+		tgt = fopen(tgtfn, "wb");
+	} else
+		// We'll write to stdout
+		tgt = stdout;
+
+	if (tgt == NULL) {
+		fprintf(stderr, "Failed to open output file.\n");
+		return 1;
+	}
 
 	// Seek to data chunk location (44 bytes in)
 	fseek(tgt, 44, SEEK_SET);

@@ -4,10 +4,12 @@
 
 - i'd like the program to accept: source file [target file] [stretch factor]
 
+- implement byte -> sine tone thing
+
 if target file is provided, we write to it (possibly creating/overwriting it)
 
 if not, we write to stdout.
 
-...maybe?
+if neither file is provided (but perhaps an integer argument) we take from stdin and write to stdout.
 
 stretch factor is also optional. if not present, use stretch factor 1.
