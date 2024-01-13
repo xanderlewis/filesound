@@ -1,18 +1,28 @@
+/* filesound: convert arbitrary files to wave audio files. (DISCLAIMER: it's a little bit hacky, but that's good enough for now!) */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 
 #define SAMPLE_RATE 44000
 #define NUM_CHANNELS 2
 #define BIT_DEPTH 16
-// two bytes per sample; four bytes per stereo sample
-// (NUM_CHANNELS * BIT_DEPTH / 8 == 4)
+/* two bytes per sample; four bytes per stereo sample
+ * (NUM_CHANNELS * BIT_DEPTH / 8 == 4) */
+
+/* parameters for sine tone output */
+#define SINE_TIME_SCALE 0.001
+#define BYTES_PER_SECOND 128
+#define SINE_AMP_SCALE 32767
 
 /* NOTE: Subchunk2Size (the size of the actual data in bytes) is 4 bytes (stored as an unsigned int)
  * so WAVE files are limited to a maximum file size of (2^32 - 1) bytes: approx 4.3 gigabytes. */
 
 unsigned long copy_bytes(FILE*, FILE*, int);
+unsigned long write_bytes_sine(FILE*, FILE*, int);
+unsigned long write_sine_stereo(FILE*, FILE*, int);
 void write_riff_header(FILE*, int);
 void write_fmt_subchunk(FILE*);
 void write_data_header(FILE*, unsigned long);
@@ -85,26 +95,29 @@ int main(int argc, char *argv[]) {
 	fseek(tgt, 44, SEEK_SET);
 
 	// Write raw data
-	unsigned long n = copy_bytes(src, tgt, stretch_factor);
+	//unsigned long n = copy_bytes(src, tgt, stretch_factor);
+	
+	// Write sine tones
+	unsigned long n = write_bytes_sine(src, tgt, SAMPLE_RATE / BYTES_PER_SECOND);
 
 	// Seek back to the beginning again
 	fseek(tgt, 0, SEEK_SET);
 
 	// Write RIFF subchunk header
-	write_riff_header(tgt, n * stretch_factor);
+	write_riff_header(tgt, n);
 
 	// Write fmt subchunk header
 	write_fmt_subchunk(tgt);
 
 	// Write data subchunk header
-	write_data_header(tgt, n * stretch_factor);
+	write_data_header(tgt, n);
 
 	// Close files
 	fclose(src);
 	fclose(tgt);
 
-	int secs = (n * stretch_factor) / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
-	printf("Wrote %lu bytes (about %d seconds of audio).\n", n * stretch_factor, secs);
+	int secs = n / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
+	printf("Wrote %lu bytes (~%d seconds of audio).\n", n, secs);
 
 	return 0;
 }
@@ -129,8 +142,38 @@ unsigned long copy_bytes(FILE *fi, FILE *fo, int sf) {
 				fputc(c[k], fo);
 	}
 
-	// return (approx.) number of bytes copied across (ignoring sf)
-	return i * stereo_sample_bytes;
+	// return (approx.) number of bytes copied across
+	return i * stereo_sample_bytes * sf;
+}
+
+/* convert each byte to a sine tone of duration t samples and pitch depending on the byte value. */
+unsigned long write_bytes_sine(FILE *fi, FILE *fo, int t) {
+	int i, j, k;
+	char c;
+	short s[1];
+	for (i = 0; !feof(fi); i++) {
+		// Get a byte
+		c = fgetc(fi);
+		// Write out sine tone (that lasts for t samples)
+		for (j = 0; j < t; j++) {
+			for (k = 0; k < NUM_CHANNELS; k++)
+				s[0] = (short) (sin(SINE_TIME_SCALE * j * (float) c) * SINE_AMP_SCALE);
+				//if (j == 0)
+				//	printf("byte: 0x%x\n", c);
+				//	printf("amplitude: %hi\n", s[0]);
+				//printf("input to sine: %f\n", SINE_SCALE * j * (float) c);
+				//printf("j: %d\n\n", j);
+				fwrite(s, sizeof(short), 1, fo);
+		}
+	}
+
+	printf("i: %d\n", i);
+	return i * t *  NUM_CHANNELS * BIT_DEPTH / 8;
+}
+
+/* convert each sample-length byte sequence to a sine tone in each channel of duration t */
+unsigned long write_sine_stereo(FILE *fi, FILE *fo, int t) {
+	;
 }
 
 void write_riff_header(FILE *f, int n) {
