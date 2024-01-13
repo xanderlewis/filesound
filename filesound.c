@@ -4,8 +4,9 @@
 
 #define SAMPLE_RATE 44000
 #define NUM_CHANNELS 2
-#define BIT_DEPTH 16 // two bytes per sample; four bytes per stereo sample
-		     // (NUM_CHANNELS * BIT_DEPTH / 8 == 4)
+#define BIT_DEPTH 16
+// two bytes per sample; four bytes per stereo sample
+// (NUM_CHANNELS * BIT_DEPTH / 8 == 4)
 
 /* NOTE: Subchunk2Size (the size of the actual data in bytes) is 4 bytes (stored as an unsigned int)
  * so WAVE files are limited to a maximum file size of (2^32 - 1) bytes: approx 4.3 gigabytes. */
