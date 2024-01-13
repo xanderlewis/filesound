@@ -4,7 +4,8 @@
 
 #define SAMPLE_RATE 44000
 #define NUM_CHANNELS 2
-#define BIT_DEPTH 16 // two bytes per sample; four bytes per stereo sample (the 'byterate')
+#define BIT_DEPTH 16 // two bytes per sample; four bytes per stereo sample
+		     // (NUM_CHANNELS * BIT_DEPTH / 8 == 4)
 
 /* NOTE: Subchunk2Size (the size of the actual data in bytes) is 4 bytes (stored as an unsigned int)
  * so WAVE files are limited to a maximum file size of (2^32 - 1) bytes: approx 4.3 gigabytes. */
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
 	fseek(tgt, 0, SEEK_SET);
 
 	// Write RIFF subchunk header
-	write_riff_header(tgt, n);
+	write_riff_header(tgt, n * stretch_factor);
 
 	// Write fmt subchunk header
 	write_fmt_subchunk(tgt);
@@ -56,19 +57,26 @@ int main(int argc, char *argv[]) {
 
 /* write bytes from stream pointed to by fi to that pointed to by fo, stretching by factor sf. */
 unsigned long copy_bytes(FILE *fi, FILE *fo, int sf) {
-	char c;
+	short stereo_sample_bytes = BIT_DEPTH * NUM_CHANNELS / 8;
+	char c[stereo_sample_bytes];
 	unsigned long i;
-	int j;
-	// Write bytes from source to target
+	int j, k;
+	// -- Write bytes from source to target --
 	for (i = 0; !feof(fi); i++) {
-		c = fgetc(fi);
+		// Collect single stereo sample's worth of bytes
+		for (j = 0; j < stereo_sample_bytes; j++) {
+			if (feof(fi))
+				break;
+			c[j] = fgetc(fi);
+		}
+		// Write this sequence of bytes into file sf many times
 		for (j = 0; j < sf; j++)
-			fputc(c, fo);
+			for (k = 0; k < stereo_sample_bytes; k++)
+				fputc(c[k], fo);
 	}
 
-	//printf("Last byte was %02x.\n", c);
-	// return number of bytes copied across (ignoring sf)
-	return i;
+	// return (approx.) number of bytes copied across (ignoring sf)
+	return i * stereo_sample_bytes;
 }
 
 void write_riff_header(FILE *f, int n) {
