@@ -167,6 +167,7 @@ void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep) {
 				*sf = atoi(argv[i - 2]);
 			else
 				*srcp = argv[i - 2];
+				*tgtp = argv[i - 2];
 		} else {
 			// at least two arguments...
 			if (argv[i++] == NULL) {
