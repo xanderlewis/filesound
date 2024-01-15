@@ -184,7 +184,7 @@ void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep) {
 	}
 }
 
-// I completely forget that we have argc... so we don't need to do the above to work out how many argument's we've got. :(
+// I completely forget that we have argc... so we don't need to do the above to work out how many arguments we've got. :(
 
 /* write bytes from stream pointed to by fi to that pointed to by fo, stretching by factor sf. */
 unsigned long copy_bytes(FILE *fi, FILE *fo, int sf) {

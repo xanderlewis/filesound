@@ -6,9 +6,11 @@
 
 - implement byte -> sine tone thing
 
+- tidy up argument parsing logic
+
 if target file is provided, we write to it (possibly creating/overwriting it)
 
-if not, we write to stdout.
+if not, we write to a file with the same name (but .wav)
 
 if neither file is provided (but perhaps an integer argument) we take from stdin and write to stdout.
 
