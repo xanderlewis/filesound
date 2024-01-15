@@ -9,7 +9,7 @@ Compile the source and invoke in the form `./filesound [-s] [source_file] [targe
 
 The `-s` flag tells filesound to turn each byte in the source file to a pure sine of fixed duration (for the moment, not adjustable); with no flags, filesound defaults to writing the raw bytes (each `stretch_factor` many times).
 
-If no arguments are given, it defaults to reading from STDIN and writing to STDOUT (for use as part of a pipeline. For example:
+If no arguments are given, it defaults to reading from STDIN and writing to STDOUT (for use as part of a pipeline). For example:
 
 `for i in {1..1000}; do ps -A; sleep 0.01; done | ./filesound > processes.wav`
 
