@@ -17,9 +17,13 @@
 #define BYTES_PER_SECOND 128
 #define SINE_AMP_SCALE 32767
 
+#define OFF 0
+#define ON 1
+
 /* NOTE: Subchunk2Size (the size of the actual data in bytes) is 4 bytes (stored as an unsigned int)
  * so WAVE files are limited to a maximum file size of (2^32 - 1) bytes: approx 4.3 gigabytes. */
 
+void parse_args(char*[], char**, char**, int*, char*);
 unsigned long copy_bytes(FILE*, FILE*, int);
 unsigned long write_bytes_sine(FILE*, FILE*, int);
 unsigned long write_sine_stereo(FILE*, FILE*, int);
@@ -30,7 +34,13 @@ void write_data_header(FILE*, unsigned long);
 int main(int argc, char *argv[]) {
 
 	// Parse arguments
+	char sine_flag = OFF;
 	int stretch_factor = 1;
+	char *srcfn, *tgtfn;
+	parse_args(argv, &srcfn, &tgtfn, &stretch_factor, &sine_flag);
+
+	// Parse arguments (OLD) --------------------------------------------------
+	/* int stretch_factor = 1;
 	char *srcfn, *tgtfn;
 	srcfn = tgtfn = NULL;
 	if (argc == 4) {
@@ -60,9 +70,11 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Too many arguments.\n");
 
 	} else {
-		// Should never happen
+		// Should never happen!
 		fprintf(stderr, "Something really weird happened.\n");
-	}
+	} */
+
+	// THE ABOVE IS OLD ------------------------------------------------------
 	
 	// Open source file
 	FILE *src;
@@ -94,33 +106,84 @@ int main(int argc, char *argv[]) {
 	// Seek to data chunk location (44 bytes in)
 	fseek(tgt, 44, SEEK_SET);
 
-	// Write raw data
-	//unsigned long n = copy_bytes(src, tgt, stretch_factor);
+	// Either write raw data or sine tones, depending on presence of -s flag
+	unsigned long byte_count;
+	if (sine_flag == ON) {
+		byte_count = write_bytes_sine(src, tgt, SAMPLE_RATE / BYTES_PER_SECOND);
+	} else {
+		byte_count = copy_bytes(src, tgt, stretch_factor);
+	}
 	
-	// Write sine tones
-	unsigned long n = write_bytes_sine(src, tgt, SAMPLE_RATE / BYTES_PER_SECOND);
-
 	// Seek back to the beginning again
 	fseek(tgt, 0, SEEK_SET);
 
 	// Write RIFF subchunk header
-	write_riff_header(tgt, n);
+	write_riff_header(tgt, byte_count);
 
 	// Write fmt subchunk header
 	write_fmt_subchunk(tgt);
 
 	// Write data subchunk header
-	write_data_header(tgt, n);
+	write_data_header(tgt, byte_count);
 
 	// Close files
 	fclose(src);
 	fclose(tgt);
 
-	int secs = n / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
-	printf("Wrote %lu bytes (~%d seconds of audio).\n", n, secs);
+	int secs = byte_count / (SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8);
+	printf("Wrote %lu bytes (~%d seconds of audio).\n", byte_count, secs);
 
 	return 0;
 }
+
+/* parse the command line arguments given to filesound. */
+void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep) {
+	int i = 1;
+	char c;
+	// deal with flags
+	while (argv[i][0] == '-') {
+		switch (c = argv[i++][1]) {
+			case 's':
+				*sinep = ON;
+				break;
+			default:
+				// some other flag
+				fprintf(stderr, "ERROR: Unknown flag %c.\n", c);
+				break;
+		}
+	}
+
+	// deal with arguments (filenames and stretch factor)
+	if (argv[i++] == NULL) {
+		// no more arguments; default to stdin and stdout (just return a null pointer from here)
+		*srcp = NULL;
+		*tgtp = NULL;
+	} else {
+		// at least one more argument...
+		if (argv[i++] == NULL) {
+			// exactly one argument; interpret as stretch_factor if (first char) a digit, else source_file.
+			// NOTE: this means we should probably avoid trying to have filenames that start with a digit.
+			if (isdigit((int) argv[i - 2][0]))
+				*sf = atoi(argv[i - 2]);
+			else
+				*srcp = argv[i - 2];
+		} else {
+			// at least two arguments...
+			if (argv[i++] == NULL) {
+				// exactly two arguments; interpret as source_file target_file
+				*srcp = argv[i - 3];
+				*tgtp = argv[i - 2];
+			} else {
+				// three arguments; interpret as source_file target_file stretch_factor
+				*srcp = argv[i - 3];
+				*tgtp = argv[i - 2];
+				*sf = atoi(argv[i - 1]);
+			}
+		}
+	}
+}
+
+// I completely forget that we have argc... so we don't need to do the above to work out how many argument's we've got. :(
 
 /* write bytes from stream pointed to by fi to that pointed to by fo, stretching by factor sf. */
 unsigned long copy_bytes(FILE *fi, FILE *fo, int sf) {
@@ -166,14 +229,12 @@ unsigned long write_bytes_sine(FILE *fi, FILE *fo, int t) {
 				fwrite(s, sizeof(short), 1, fo);
 		}
 	}
-
-	printf("i: %d\n", i);
 	return i * t *  NUM_CHANNELS * BIT_DEPTH / 8;
 }
 
 /* convert each sample-length byte sequence to a sine tone in each channel of duration t */
 unsigned long write_sine_stereo(FILE *fi, FILE *fo, int t) {
-	;
+	return 0.0;
 }
 
 void write_riff_header(FILE *f, int n) {
