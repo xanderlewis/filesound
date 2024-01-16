@@ -14,7 +14,7 @@
 
 /* parameters for sine tone output */
 #define SINE_TIME_SCALE 0.001
-#define BYTES_PER_SECOND 128
+#define BYTES_PER_SECOND 8 //128
 #define SINE_AMP_SCALE 32767
 
 #define OFF 0
@@ -23,7 +23,7 @@
 /* NOTE: Subchunk2Size (the size of the actual data in bytes) is 4 bytes (stored as an unsigned int)
  * so WAVE files are limited to a maximum file size of (2^32 - 1) bytes: approx 4.3 gigabytes. */
 
-void parse_args(char*[], char**, char**, int*, char*);
+void parse_args(char*[], char**, char**, int*, char*, int*);
 unsigned long copy_bytes(FILE*, FILE*, int);
 unsigned long write_bytes_sine(FILE*, FILE*, int);
 unsigned long write_sine_stereo(FILE*, FILE*, int);
@@ -37,7 +37,8 @@ int main(int argc, char *argv[]) {
 	char sine_flag = OFF;
 	int stretch_factor = 1;
 	char *srcfn, *tgtfn;
-	parse_args(argv, &srcfn, &tgtfn, &stretch_factor, &sine_flag);
+	int bps = 128; // if left unspecified, we default to 128 bytes per second (for the sine tone output mode)
+	parse_args(argv, &srcfn, &tgtfn, &stretch_factor, &sine_flag, &bps);
 
 	// Parse arguments (OLD) --------------------------------------------------
 	/* int stretch_factor = 1;
@@ -109,7 +110,7 @@ int main(int argc, char *argv[]) {
 	// Either write raw data or sine tones, depending on presence of -s flag
 	unsigned long byte_count;
 	if (sine_flag == ON) {
-		byte_count = write_bytes_sine(src, tgt, SAMPLE_RATE / BYTES_PER_SECOND);
+		byte_count = write_bytes_sine(src, tgt, SAMPLE_RATE / bps);
 	} else {
 		byte_count = copy_bytes(src, tgt, stretch_factor);
 	}
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
 }
 
 /* parse the command line arguments given to filesound. */
-void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep) {
+void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep, int *bps) {
 	int i = 1;
 	char c;
 	// deal with flags
@@ -153,7 +154,12 @@ void parse_args(char *argv[], char **srcp, char **tgtp, int *sf, char *sinep) {
 		}
 	}
 
-	// deal with arguments (filenames and stretch factor)
+	// if -s flag is set, the user MUST specify bytes per second
+	if (*sinep == ON) {
+		*bps = atoi(argv[i++]);
+	}
+
+	// deal with 'normal' arguments (filenames and stretch factor)
 	if (argv[i++] == NULL) {
 		// no more arguments; default to stdin and stdout (just return a null pointer from here)
 		*srcp = NULL;
