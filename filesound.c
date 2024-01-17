@@ -40,43 +40,6 @@ int main(int argc, char *argv[]) {
 	int bps = 128; // if left unspecified, we default to 128 bytes per second (for the sine tone output mode)
 	parse_args(argv, &srcfn, &tgtfn, &stretch_factor, &sine_flag, &bps);
 
-	// Parse arguments (OLD) --------------------------------------------------
-	/* int stretch_factor = 1;
-	char *srcfn, *tgtfn;
-	srcfn = tgtfn = NULL;
-	if (argc == 4) {
-		srcfn = argv[1];
-		tgtfn = argv[2];
-		stretch_factor = atoi(argv[3]);
-
-	} else if (argc == 3) {
-		srcfn = argv[1];
-		if (isdigit((int) *argv[2]))
-			stretch_factor = atoi(argv[2]);
-		else
-			tgtfn = argv[2];
-
-	} else if (argc == 2) {
-		if (isdigit((int) *argv[1]))
-			stretch_factor = atoi(argv[1]);
-		else
-			srcfn = argv[1];
-
-		tgtfn = srcfn;
-
-	} else if (argc == 1) {
-		// We'll go stdin --> stdout, with stretch factor 1.
-		
-	} else if (argc > 4) {
-		fprintf(stderr, "Too many arguments.\n");
-
-	} else {
-		// Should never happen!
-		fprintf(stderr, "Something really weird happened.\n");
-	} */
-
-	// THE ABOVE IS OLD ------------------------------------------------------
-	
 	// Open source file
 	FILE *src;
 	if (srcfn != NULL)
@@ -250,49 +213,50 @@ void write_riff_header(FILE *f, int n) {
 	fputs("RIFF", f);
 	
 	// ChunkSize - 4 bytes
-	unsigned int a[1];
-	a[0] = (unsigned int) n + 36; // number of bytes in the data plus 36
-	fwrite(a, 4, 1, f);
+	unsigned int a = n + 36; // number of bytes in the data plus 36
+	fwrite(&a, 4, 1, f);
 	
 	// Format - 4 bytes
 	fputs("WAVE", f); // (0x57415645 big-endian)	
 }
 
 void write_fmt_subchunk(FILE *f) {
-	unsigned int a[1];
-	unsigned short b[1];
+	unsigned int a; // 4 bytes (on my machine)
+	unsigned short b; // 2 bytes (on my machine)
+			  // (to do this properly it would perhaps be more portable to actually
+			  // have an array of bytes (chars?) but this is fine for now.)
 
 	// Subchunk1ID - 4 bytes
 	fputs("fmt ", f);
 
 	// Subchunk1Size - 4 bytes (16 for PCM)
-	a[0] = 16;
-	fwrite(a, 4, 1, f);
+	a = 16;
+	fwrite(&a, 4, 1, f);
 
 	// AudioFormat - 2 bytes (1 for PCM) (i.e. linear quantization)
-	b[0] = 1;
-	fwrite(b, 2, 1, f);
+	b = 1;
+	fwrite(&b, 2, 1, f);
 
 	// NumChannels - 2 bytes (in this case, stereo. so 2)
-	b[0] = NUM_CHANNELS;
-	fwrite(b, 2, 1, f);
+	b = NUM_CHANNELS;
+	fwrite(&b, 2, 1, f);
 
 	// SampleRate - 4 bytes (in this case, 44000Hz)
-	a[0] = SAMPLE_RATE;
-	fwrite(a, 4, 1, f);
+	a = SAMPLE_RATE;
+	fwrite(&a, 4, 1, f);
 
 	// ByteRate - 4 bytes (== SampleRate*NumChannels*BitsPerSample/8 == 176000)
-	a[0] = SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8;
-	fwrite(a, 4, 1, f);
+	a = SAMPLE_RATE * NUM_CHANNELS * BIT_DEPTH / 8;
+	fwrite(&a, 4, 1, f);
 
 	// BlockAlign - 2 bytes (== NumChannels*BitsPerSample/8 == 4)
 	// (number of bytes per sample, including both (for stereo) channels)
-	b[0] = NUM_CHANNELS * BIT_DEPTH / 8;
-	fwrite(b, 2, 1, f);
+	b = NUM_CHANNELS * BIT_DEPTH / 8;
+	fwrite(&b, 2, 1, f);
 
 	// BitsPerSample - 2 bytes (in this case, 16)
-	b[0] = BIT_DEPTH;
-	fwrite(b, 2, 1, f);
+	b = BIT_DEPTH;
+	fwrite(&b, 2, 1, f);
 }
 
 void write_data_header(FILE *f, unsigned long n) {
